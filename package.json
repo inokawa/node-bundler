@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "index.mjs",
   "scripts": {
-    "start": "node index.mjs"
+    "start": "node index.mjs --entry-point product/entry-point.js"
   },
   "dependencies": {
     "chalk": "^5.0.1",
