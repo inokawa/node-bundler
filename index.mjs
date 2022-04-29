@@ -4,6 +4,8 @@ import { dirname, join, resolve } from "path";
 import { fileURLToPath } from "url";
 import chalk from "chalk";
 import yargs from "yargs";
+import Resolver from "jest-resolve";
+import { DependencyResolver } from "jest-resolve-dependencies";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "product");
 
@@ -32,3 +34,11 @@ if (!hasteFS.exists(entryPoint)) {
 console.log(hasteFS.getDependencies(entryPoint));
 
 console.log(chalk.bold(`❯ Building ${chalk.blue(options.entryPoint)}`));
+
+const resolver = new Resolver.default(moduleMap, {
+  extensions: [".js"],
+  hasCoreModules: false,
+  rootDir: root,
+});
+const dependencyResolver = new DependencyResolver(resolver, hasteFS);
+console.log(dependencyResolver.resolve(entryPoint));

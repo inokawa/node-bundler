@@ -8,6 +8,8 @@
   "dependencies": {
     "chalk": "^5.0.1",
     "jest-haste-map": "^28.0.2",
+    "jest-resolve": "^28.0.3",
+    "jest-resolve-dependencies": "^28.0.3",
     "yargs": "^17.4.1"
   },
   "repository": "git@github.com:inokawa/node-bundler.git",
