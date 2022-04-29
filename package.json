@@ -6,6 +6,8 @@
     "start": "node index.mjs"
   },
   "dependencies": {
+    "@babel/core": "^7.17.10",
+    "@babel/plugin-transform-modules-commonjs": "^7.17.9",
     "chalk": "^5.0.1",
     "jest-haste-map": "^28.0.2",
     "jest-resolve": "^28.0.3",

@@ -6,6 +6,7 @@ import JestHasteMap from "jest-haste-map";
 import Resolver from "jest-resolve";
 import yargs from "yargs";
 import fs from "fs";
+import { transformSync } from "@babel/core";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "product");
 
@@ -75,33 +76,35 @@ console.log(chalk.bold(`❯ Serializing bundle`));
 // Wrap modules with `define(<id>, function(module, exports, require) { <code> });`
 const wrapModule = (id, code) =>
   `define(${id}, function(module, exports, require) {\n${code}});`;
-// The code for each module gets added to this array.
-const output = [];
-for (const [module, metadata] of Array.from(modules).reverse()) {
-  let { id, code } = metadata;
-  for (const [dependencyName, dependencyPath] of metadata.dependencyMap) {
-    const dependency = modules.get(dependencyPath);
-    // Swap out the reference the required module with the generated
-    // module it. We use regex for simplicity. A real bundler would likely
-    // do an AST transform using Babel or similar.
-    code = code.replace(
-      new RegExp(
-        `require\\(('|")${dependencyName.replace(/[\/.]/g, "\\$&")}\\1\\)`
-      ),
-      `require(${dependency.id})`
-    );
-  }
-  // Wrap the code and add it to our output array.
-  output.push(wrapModule(id, code));
-}
+const results = await Promise.all(
+  Array.from(modules)
+    .reverse()
+    .map(async ([module, metadata]) => {
+      let { id, code } = metadata;
+      code = transformSync(code, {
+        plugins: ["@babel/plugin-transform-modules-commonjs"],
+      }).code;
+      for (const [dependencyName, dependencyPath] of metadata.dependencyMap) {
+        const dependency = modules.get(dependencyPath);
+        code = code.replace(
+          new RegExp(
+            `require\\(('|")${dependencyName.replace(/[\/.]/g, "\\$&")}\\1\\)`
+          ),
+          `require(${dependency.id})`
+        );
+      }
+      return wrapModule(id, code);
+    })
+);
 
-// Add the `require`-runtime at the beginning of our bundle.
-output.unshift(fs.readFileSync("./require.js", "utf8"));
-// And require the entry point at the end of the bundle.
-output.push(["requireModule(0);"]);
-// Write it to stdout.
-console.log(output.join("\n"));
+const output = [
+  fs.readFileSync("./require.js", "utf8"),
+  ...results,
+  "requireModule(0);",
+].join("\n");
+
+console.log(output);
 
 if (options.output) {
-  fs.writeFileSync(options.output, output.join("\n"), "utf8");
+  fs.writeFileSync(options.output, output, "utf8");
 }

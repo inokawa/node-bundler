@@ -1,1 +1,3 @@
-console.log(require("./apple"));
+import Apple from "./apple";
+
+console.log(Apple);
