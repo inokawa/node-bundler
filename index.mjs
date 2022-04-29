@@ -29,4 +29,6 @@ if (!hasteFS.exists(entryPoint)) {
   );
 }
 
+console.log(hasteFS.getDependencies(entryPoint));
+
 console.log(chalk.bold(`❯ Building ${chalk.blue(options.entryPoint)}`));
