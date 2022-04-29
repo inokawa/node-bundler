@@ -2,6 +2,7 @@ import JestHasteMap from "jest-haste-map";
 import { cpus } from "os";
 import { dirname, join, resolve } from "path";
 import { fileURLToPath } from "url";
+import fs from 'fs';
 import chalk from "chalk";
 import yargs from "yargs";
 import Resolver from "jest-resolve";
@@ -55,3 +56,13 @@ while (queue.length) {
 }
 console.log(chalk.bold(`❯ Found ${chalk.blue(allFiles.size)} files`));
 console.log(Array.from(allFiles));
+
+console.log(chalk.bold(`❯ Serializing bundle`));
+const allCode = [];
+await Promise.all(
+  Array.from(allFiles).map(async (file) => {
+    const code = await fs.promises.readFile(file, "utf8");
+    allCode.push(code);
+  })
+);
+console.log(allCode.join("\n"));
