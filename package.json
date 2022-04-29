@@ -1,0 +1,16 @@
+{
+  "name": "node-bundler",
+  "version": "1.0.0",
+  "main": "index.mjs",
+  "scripts": {
+    "start": "node index.mjs"
+  },
+  "dependencies": {
+    "chalk": "^5.0.1",
+    "jest-haste-map": "^28.0.2",
+    "yargs": "^17.4.1"
+  },
+  "repository": "git@github.com:inokawa/node-bundler.git",
+  "author": "inokawa <48897392+inokawa@users.noreply.github.com>",
+  "license": "MIT"
+}
