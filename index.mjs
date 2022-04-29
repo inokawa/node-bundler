@@ -41,6 +41,7 @@ const resolver = new Resolver.default(moduleMap, {
 const seen = new Set();
 const modules = new Map();
 const queue = [entryPoint];
+let id = 0;
 while (queue.length) {
   const module = queue.shift();
   if (seen.has(module)) {
@@ -48,8 +49,6 @@ while (queue.length) {
   }
   seen.add(module);
 
-  // Resolve each dependency and store it based on their "name",
-  // that is the actual occurrence in code via `require('<name>');`.
   const dependencyMap = new Map(
     hasteFS
       .getDependencies(module)
@@ -60,11 +59,10 @@ while (queue.length) {
   );
 
   const code = fs.readFileSync(module, "utf8");
-  // Extract the "module body", in our case everything after `module.exports =`;
-  const moduleBody = code.match(/module\.exports\s+=\s+(.*?);/)?.[1] || "";
-
   const metadata = {
-    code: moduleBody || code,
+    // Assign a unique id to each module.
+    id: id++,
+    code,
     dependencyMap,
   };
   modules.set(module, metadata);
@@ -74,20 +72,36 @@ while (queue.length) {
 console.log(chalk.bold(`❯ Found ${chalk.blue(seen.size)} files`));
 
 console.log(chalk.bold(`❯ Serializing bundle`));
-// Go through each module (backwards, to process the entry-point last).
+// Wrap modules with `define(<id>, function(module, exports, require) { <code> });`
+const wrapModule = (id, code) =>
+  `define(${id}, function(module, exports, require) {\n${code}});`;
+// The code for each module gets added to this array.
+const output = [];
 for (const [module, metadata] of Array.from(modules).reverse()) {
-  let { code } = metadata;
+  let { id, code } = metadata;
   for (const [dependencyName, dependencyPath] of metadata.dependencyMap) {
-    // Inline the module body of the dependency into the module that requires it.
+    const dependency = modules.get(dependencyPath);
+    // Swap out the reference the required module with the generated
+    // module it. We use regex for simplicity. A real bundler would likely
+    // do an AST transform using Babel or similar.
     code = code.replace(
       new RegExp(
-        // Escape `.` and `/`.
         `require\\(('|")${dependencyName.replace(/[\/.]/g, "\\$&")}\\1\\)`
       ),
-      modules.get(dependencyPath).code
+      `require(${dependency.id})`
     );
   }
-  metadata.code = code;
+  // Wrap the code and add it to our output array.
+  output.push(wrapModule(id, code));
 }
 
-console.log(modules.get(entryPoint).code);
+// Add the `require`-runtime at the beginning of our bundle.
+output.unshift(fs.readFileSync("./require.js", "utf8"));
+// And require the entry point at the end of the bundle.
+output.push(["requireModule(0);"]);
+// Write it to stdout.
+console.log(output.join("\n"));
+
+if (options.output) {
+  fs.writeFileSync(options.output, output.join("\n"), "utf8");
+}
